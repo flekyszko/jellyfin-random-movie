@@ -29,32 +29,41 @@ jobs:
       - name: Build
         run: dotnet build -c Release --no-restore
 
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          echo "pkg=${VER}.0" >> "$GITHUB_OUTPUT"
+          echo "pkg_dir=RandomMovie_${VER}.0" >> "$GITHUB_OUTPUT"
+          echo "zip=RandomMovie-${VER}.0.zip" >> "$GITHUB_OUTPUT"
+
       - name: Create plugin package
         shell: bash
         run: |
           set -e
           BUILD_DIR="src/Jellyfin.Plugin.RandomMovie/bin/Release/net9.0"
-          PKG_DIR="RandomMovie_1.0.0.0"
+          PKG_DIR="${{ steps.version.outputs.pkg_dir }}"
           mkdir -p "$PKG_DIR"
           cp "$BUILD_DIR/Jellyfin.Plugin.RandomMovie.dll" "$PKG_DIR/"
           cp meta.json "$PKG_DIR/"
           cp src/Jellyfin.Plugin.RandomMovie/runtimeconfig.json "$PKG_DIR/"
-          zip -r RandomMovie-1.0.0.0.zip "$PKG_DIR"
+          zip -r "${{ steps.version.outputs.zip }}" "$PKG_DIR"
 
       - name: Compute checksums
         id: checksum
         shell: bash
         run: |
-          echo "md5=$(md5sum RandomMovie-1.0.0.0.zip | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          echo "sha256=$(sha256sum RandomMovie-1.0.0.0.zip | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "md5=$(md5sum '${{ steps.version.outputs.zip }}' | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum '${{ steps.version.outputs.zip }}' | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Update manifest.json
         shell: bash
         run: |
           set -e
-          THE_VERSION="${GITHUB_REF_NAME#v}"
+          THE_VERSION="${{ steps.version.outputs.pkg }}"
           THE_ABI="10.11.11.0"
-          THE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/RandomMovie-1.0.0.0.zip"
+          THE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${{ steps.version.outputs.zip }}"
           TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           cat > manifest.json <<EOF
           [
@@ -67,8 +76,8 @@ jobs:
               "category": "General",
               "versions": [
                 {
-                  "version": "1.0.0.0",
-                  "changelog": "Initial release. Adds a dice button to the web UI that suggests a random TMDB movie filtered by genre, year and minimum rating.",
+                  "version": "${THE_VERSION}",
+                  "changelog": "Fixes plugin settings page registration and adds a more robust web UI injection.",
                   "targetAbi": "10.11.11.0",
                   "sourceUrl": "${THE_URL}",
                   "checksum": "${{ steps.checksum.outputs.md5 }}",
@@ -86,10 +95,12 @@ jobs:
           git config user.name "flekyszko"
           git config user.email "flekyszko@users.noreply.github.com"
           git checkout main
-          git add manifest.json
-          if git diff --cached --quiet; then
-            echo "No manifest changes to commit."
+          OLD=$(git show main:manifest.json 2>/dev/null | sed -n 's/.*"checksum": *"\([a-f0-9]*\)".*/\1/p' || true)
+          NEW=$(sed -n 's/.*"checksum": *"\([a-f0-9]*\)".*/\1/p' manifest.json)
+          if [ "$OLD" = "$NEW" ]; then
+            echo "Manifest checksum unchanged; skipping commit."
           else
+            git add manifest.json
             git commit -m "Publish manifest for ${GITHUB_REF_NAME}"
             git push origin main
           fi
@@ -98,7 +109,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            RandomMovie-1.0.0.0.zip
+            ${{ steps.version.outputs.zip }}
             icon.png
           tag_name: ${{ github.ref_name }}
           body: |
@@ -110,7 +121,7 @@ jobs:
             Then install **Random Movie** from the catalog.
 
             ### Manual
-            1. Download `RandomMovie-1.0.0.0.zip`
+            1. Download `${{ steps.version.outputs.zip }}`
             2. Extract the folder into your Jellyfin **plugins** directory
             3. Restart Jellyfin, then set your TMDB API key in Dashboard → Plugins → Random Movie
 
