@@ -1,0 +1,34 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+dist/
+artifacts/
+
+# Rider / VS / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# .NET
+*.nupkg
+*.snupkg
+project.lock.json
+*.nuspec
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Misc
+bin/
+obj/

@@ -1,0 +1,11 @@
+{
+  "guid": "1F9B27A8-2C4E-4D6A-9C45-3A0A6B6F9C1B",
+  "name": "Random Movie",
+  "overview": "A random movie picker. Adds a dice button to the web UI that suggests a random movie from TMDB filtered by genre, year and minimum rating.",
+  "description": "Adds a floating dice button on the Jellyfin web UI. Clicking it opens a dialog where you can pick a genre, a year and a minimum rating, and the plugin returns a random matching movie from TMDB (even if it is not in your library).",
+  "owner": "flekyszko",
+  "category": "General",
+  "targetAbi": "10.11.11.0",
+  "version": "1.0.0.0",
+  "targetFramework": "net9.0"
+}

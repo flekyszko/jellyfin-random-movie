@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Create plugin package
+        shell: bash
+        run: |
+          set -e
+          BUILD_DIR="src/Jellyfin.Plugin.RandomMovie/bin/Release/net9.0"
+          PKG_DIR="RandomMovie_1.0.0.0"
+          mkdir -p "$PKG_DIR"
+          cp "$BUILD_DIR/Jellyfin.Plugin.RandomMovie.dll" "$PKG_DIR/"
+          cp meta.json "$PKG_DIR/"
+          cp src/Jellyfin.Plugin.RandomMovie/runtimeconfig.json "$PKG_DIR/"
+          zip -r RandomMovie-1.0.0.0.zip "$PKG_DIR"
+
+      - name: Compute checksums
+        id: checksum
+        shell: bash
+        run: |
+          echo "md5=$(md5sum RandomMovie-1.0.0.0.zip | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum RandomMovie-1.0.0.0.zip | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Update manifest.json
+        shell: bash
+        run: |
+          set -e
+          THE_VERSION="${GITHUB_REF_NAME#v}"
+          THE_ABI="10.11.11.0"
+          THE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/RandomMovie-1.0.0.0.zip"
+          TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          cat > manifest.json <<EOF
+          [
+            {
+              "guid": "1F9B27A8-2C4E-4D6A-9C45-3A0A6B6F9C1B",
+              "name": "Random Movie",
+              "overview": "A random movie picker for the Jellyfin web UI. Click the dice, pick a genre, a year and a minimum rating, and get a random matching movie from TMDB.",
+              "description": "Adds a floating dice button to the Jellyfin web UI. It opens a dialog where you can pick a genre, a year and a minimum rating, and the plugin returns a random matching movie from TMDB (including movies that are not in your library). Supports Hungarian and English UI. The TMDB API key stays on the server.",
+              "owner": "${GITHUB_REPOSITORY_OWNER}",
+              "category": "General",
+              "versions": [
+                {
+                  "version": "1.0.0.0",
+                  "changelog": "Initial release. Adds a dice button to the web UI that suggests a random TMDB movie filtered by genre, year and minimum rating.",
+                  "targetAbi": "10.11.11.0",
+                  "sourceUrl": "${THE_URL}",
+                  "checksum": "${{ steps.checksum.outputs.md5 }}",
+                  "timestamp": "${TS}"
+                }
+              ]
+            }
+          ]
+          EOF
+
+      - name: Commit manifest back to main
+        shell: bash
+        run: |
+          set -e
+          git config user.name "flekyszko"
+          git config user.email "flekyszko@users.noreply.github.com"
+          git checkout main
+          git add manifest.json
+          if git diff --cached --quiet; then
+            echo "No manifest changes to commit."
+          else
+            git commit -m "Publish manifest for ${GITHUB_REF_NAME}"
+            git push origin main
+          fi
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            RandomMovie-1.0.0.0.zip
+            icon.png
+          tag_name: ${{ github.ref_name }}
+          body: |
+            ## Random Movie ${{ github.ref_name }}
+
+            ### Install (linkes)
+            Add this repository URL in *Dashboard → Plugins → Catalog → ⚙️*:
+            \`https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/manifest.json\`
+            Then install **Random Movie** from the catalog.
+
+            ### Manual
+            1. Download `RandomMovie-1.0.0.0.zip`
+            2. Extract the folder into your Jellyfin **plugins** directory
+            3. Restart Jellyfin, then set your TMDB API key in Dashboard → Plugins → Random Movie
+
+            MD5: `${{ steps.checksum.outputs.md5 }}`  
+            SHA256: `${{ steps.checksum.outputs.sha256 }}`
