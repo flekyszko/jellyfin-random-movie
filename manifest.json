@@ -8,12 +8,12 @@
     "category": "General",
     "versions": [
       {
-        "version": "1.0.0.0",
-        "changelog": "Initial release. Adds a dice button to the web UI that suggests a random TMDB movie filtered by genre, year and minimum rating.",
+        "version": "1.0.1.0",
+        "changelog": "Fixes plugin settings page registration and adds a more robust web UI injection.",
         "targetAbi": "10.11.11.0",
-        "sourceUrl": "https://github.com/flekyszko/jellyfin-random-movie/releases/download/v1.0.0/RandomMovie-1.0.0.0.zip",
-        "checksum": "259ff1990ecd0d58c135edad9de2ca3d",
-        "timestamp": "2026-08-07T20:58:06Z"
+        "sourceUrl": "https://github.com/flekyszko/jellyfin-random-movie/releases/download/v1.0.1/RandomMovie-1.0.1.0.zip",
+        "checksum": "0b6682492f9e9c5acfbce7502fee55c8",
+        "timestamp": "2026-08-07T21:05:49Z"
       }
     ]
   }
