@@ -3,105 +3,68 @@
 <head>
     <meta charset="utf-8">
     <title>Random Movie</title>
-    <style>
-        body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: transparent; color: #fff; }
-        .rm-card { max-width: 640px; background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 16px; margin: 16px; }
-        .rm-alert { background: #222; border: 1px solid #444; border-left: 4px solid #00a4dc; border-radius: 4px; padding: 10px 12px; margin-bottom: 16px; color: #ddd; line-height: 1.5; }
-        .rm-row { margin-bottom: 14px; }
-        .rm-row label { display: block; margin-bottom: 6px; font-size: 14px; color: #ccc; }
-        .rm-input, .rm-select {
-            width: 100%; box-sizing: border-box; padding: 8px; font-size: 14px; color: #fff;
-            background: #2b2b2b; border: 1px solid #444; border-radius: 4px;
-        }
-        .rm-btn {
-            padding: 10px 22px; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer;
-            background: #00a4dc; border: 0; border-radius: 4px;
-        }
-        .rm-btn:disabled { opacity: .6; cursor: default; }
-        .rm-msg { margin-top: 12px; color: #4caf50; font-size: 14px; display: none; }
-        .rm-err { margin-top: 12px; color: #ef5350; font-size: 14px; display: none; }
-    </style>
 </head>
 <body>
-    <div class="rm-card">
-        <div class="rm-alert">
-            Írd be a TMDB API kulcsot (ingyenes: themoviedb.org &rarr; API). A plugin ezzel keres a
-            könyvtáradon kívüli filmek közül véletlent.
+    <div id="RandomMovieConfigPage" data-role="page" data-title="Random Movie" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="RandomMovieConfigForm">
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="txtApiKey">TMDB API kulcs</label>
+                        <input id="txtApiKey" name="TmdbApiKey" type="password" is="emby-input" />
+                        <div class="fieldDescription">Ingyenes, a themoviedb.org kód-kulcs itt szerezhető. A plugin ezzel keresi a könyvtáradon kívüli filmeket is.</div>
+                    </div>
+                    <div class="selectContainer">
+                        <label class="selectLabel" for="selLang">UI nyelv</label>
+                        <select is="emby-select" id="selLang" name="UiLanguage" class="emby-select-withcolor emby-select">
+                            <option value="hu">Magyar</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="numPages">Max véletlen mintaoldalak (1-20)</label>
+                        <input id="numPages" name="MaxRandomPages" type="number" is="emby-input" min="1" max="20" />
+                        <div class="fieldDescription">A plugin ezt az oldalszámot kéri le a TMDB-ről, hogy széles körből válogasson véletlent.</div>
+                    </div>
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                            <span>Mentés</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
+        <script type="text/javascript">
+            var RandomMovieConfig = {
+                pluginUniqueId: '1F9B27A8-2C4E-4D6A-9C45-3A0A6B6F9C1B'
+            };
 
-        <div class="rm-row">
-            <label for="txtApiKey">TMDB API kulcs</label>
-            <input type="password" class="rm-input" id="txtApiKey" name="TmdbApiKey">
-        </div>
-
-        <div class="rm-row">
-            <label for="selLang">UI nyelv</label>
-            <select class="rm-select" id="selLang" name="UiLanguage">
-                <option value="hu">Magyar</option>
-                <option value="en">English</option>
-            </select>
-        </div>
-
-        <div class="rm-row">
-            <label for="numPages">Max véletlen mintaoldalak (1-20)</label>
-            <input type="number" class="rm-input" id="numPages" name="MaxRandomPages" min="1" max="20">
-        </div>
-
-        <button type="button" class="rm-btn" id="btnSave">Mentés</button>
-        <div class="rm-msg" id="msgSave">Elmentve!</div>
-        <div class="rm-err" id="msgErr"></div>
-    </div>
-
-    <script>
-        (function () {
-            var PLUGIN_ID = '1F9B27A8-2C4E-4D6A-9C45-3A0A6B6F9C1B';
-
-            function apiClient() {
-                return window.ApiClient || null;
-            }
-
-            function load(cb) {
-                var api = apiClient();
-                if (!api || !api.getPluginConfiguration) return;
-                api.getPluginConfiguration(PLUGIN_ID).then(cb).catch(function () { });
-            }
-
-            function save(cfg) {
-                var api = apiClient();
-                if (!api || !api.updatePluginConfiguration) return Promise.reject(new Error('ApiClient nincs'));
-                return api.updatePluginConfiguration(PLUGIN_ID, cfg);
-            }
-
-            document.getElementById('btnSave').addEventListener('click', function () {
-                var btn = document.getElementById('btnSave');
-                var msg = document.getElementById('msgSave');
-                var err = document.getElementById('msgErr');
-                msg.style.display = 'none';
-                err.style.display = 'none';
-                btn.disabled = true;
-                save({
-                    TmdbApiKey: document.getElementById('txtApiKey').value,
-                    UiLanguage: document.getElementById('selLang').value,
-                    MaxRandomPages: parseInt(document.getElementById('numPages').value, 10) || 5
-                }).then(function () {
-                    msg.style.display = 'block';
-                    setTimeout(function () { msg.style.display = 'none'; }, 2500);
-                }).catch(function (e) {
-                    err.textContent = (e && e.message) ? e.message : 'Sikertelen mentés';
-                    err.style.display = 'block';
-                }).finally(function () {
-                    btn.disabled = false;
+            document.querySelector('#RandomMovieConfigPage')
+                .addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(RandomMovieConfig.pluginUniqueId).then(function (config) {
+                        document.querySelector('#txtApiKey').value = config.TmdbApiKey || '';
+                        document.querySelector('#selLang').value = config.UiLanguage || 'hu';
+                        document.querySelector('#numPages').value = config.MaxRandomPages || 5;
+                        Dashboard.hideLoadingMsg();
+                    });
                 });
-            });
 
-            load(function (cfg) {
-                if (!cfg) return;
-                document.getElementById('txtApiKey').value = cfg.TmdbApiKey || '';
-                document.getElementById('selLang').value = cfg.UiLanguage || 'hu';
-                document.getElementById('numPages').value = cfg.MaxRandomPages || 5;
-            });
-        })();
-    </script>
+            document.querySelector('#RandomMovieConfigForm')
+                .addEventListener('submit', function (e) {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(RandomMovieConfig.pluginUniqueId).then(function (config) {
+                        config.TmdbApiKey = document.querySelector('#txtApiKey').value;
+                        config.UiLanguage = document.querySelector('#selLang').value;
+                        config.MaxRandomPages = parseInt(document.querySelector('#numPages').value, 10) || 5;
+                        ApiClient.updatePluginConfiguration(RandomMovieConfig.pluginUniqueId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    e.preventDefault();
+                    return false;
+                });
+        </script>
     </div>
 </body>
 </html>
