@@ -4,13 +4,18 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.RandomMovie;
 
-public class UiInjector
+public sealed class UiInjector
 {
-    private const string MarkerStart = "<!-- RandomMovie:BEGIN -->";
-    private const string MarkerEnd = "<!-- RandomMovie:END -->";
+    private const string MarkerStart =
+        "<!-- RandomMovie:BEGIN -->";
+
+    private const string MarkerEnd =
+        "<!-- RandomMovie:END -->";
 
     private static readonly string ScriptTag =
-        "<!-- RandomMovie:BEGIN -->\n<script src=\"RandomMovie/inject.js\" defer></script>\n<!-- RandomMovie:END -->";
+        "<!-- RandomMovie:BEGIN -->\n" +
+        "<script src=\"/RandomMovie/inject.js\" defer></script>\n" +
+        "<!-- RandomMovie:END -->";
 
     private readonly ILogger<UiInjector> _logger;
 
@@ -22,69 +27,101 @@ public class UiInjector
     public void Inject(string webDirectory)
     {
         var indexFile = FindIndexFile(webDirectory);
+
         if (indexFile is null)
         {
-            _logger.LogWarning("RandomMovie: could not locate index.html under {Path}.", webDirectory);
+            _logger.LogWarning(
+                "RandomMovie: could not locate index.html under {Path}.",
+                webDirectory);
+
             return;
         }
 
         string html;
-        try
-        {
-            html = File.ReadAllText(indexFile, Encoding.UTF8);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "RandomMovie: could not read index.html at {Path}.", indexFile);
-            return;
-        }
-
-        html = Regex.Replace(html, MarkerStart + ".*?" + MarkerEnd, string.Empty, RegexOptions.Singleline);
-
-        if (html.Contains(MarkerStart, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        var closingHead = html.IndexOf("</head>", StringComparison.OrdinalIgnoreCase);
-        var injectBefore = closingHead >= 0 ? closingHead : html.IndexOf("</html>", StringComparison.OrdinalIgnoreCase);
-        var insertAt = injectBefore >= 0 ? injectBefore : html.Length;
-
-        if (insertAt >= html.Length)
-        {
-            _logger.LogWarning("RandomMovie: index.html has no </head> or </html> marker; appending script.");
-        }
-
-        html = html.Insert(insertAt, ScriptTag + "\n");
 
         try
         {
-            File.WriteAllText(indexFile, html, new UTF8Encoding(false));
-            _logger.LogInformation("RandomMovie: injected script tag into {Path}.", indexFile);
+            html = File.ReadAllText(
+                indexFile,
+                Encoding.UTF8);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "RandomMovie: could not write injected script to {Path}.", indexFile);
+            _logger.LogError(
+                ex,
+                "RandomMovie: could not read {Path}.",
+                indexFile);
+
+            return;
+        }
+
+        /*
+         * Remove our previous injection first.
+         * This makes repeated server/plugin upgrades safe.
+         */
+        html = Regex.Replace(
+            html,
+            Regex.Escape(MarkerStart) +
+            ".*?" +
+            Regex.Escape(MarkerEnd),
+            string.Empty,
+            RegexOptions.Singleline);
+
+        var closingHead =
+            html.IndexOf(
+                "</head>",
+                StringComparison.OrdinalIgnoreCase);
+
+        var closingHtml =
+            html.IndexOf(
+                "</html>",
+                StringComparison.OrdinalIgnoreCase);
+
+        var insertAt =
+            closingHead >= 0
+                ? closingHead
+                : closingHtml >= 0
+                    ? closingHtml
+                    : html.Length;
+
+        html = html.Insert(
+            insertAt,
+            ScriptTag + "\n");
+
+        try
+        {
+            File.WriteAllText(
+                indexFile,
+                html,
+                new UTF8Encoding(false));
+
+            _logger.LogInformation(
+                "RandomMovie: injected UI script into {Path}.",
+                indexFile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "RandomMovie: could not write {Path}.",
+                indexFile);
         }
     }
 
-    private static string? FindIndexFile(string webDirectory)
+    private static string? FindIndexFile(
+        string webDirectory)
     {
-        var candidates = new List<string>();
-        if (!string.IsNullOrEmpty(webDirectory))
+        if (string.IsNullOrWhiteSpace(webDirectory))
         {
-            candidates.Add(Path.Combine(webDirectory, "index.html"));
-            candidates.Add(Path.Combine(webDirectory, "index.htm"));
+            return null;
         }
 
-        foreach (var candidate in candidates)
+        var candidates = new[]
         {
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
+            Path.Combine(webDirectory, "index.html"),
+            Path.Combine(webDirectory, "index.htm")
+        };
 
-        return null;
+        return candidates.FirstOrDefault(File.Exists);
     }
 }
