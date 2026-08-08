@@ -114,11 +114,15 @@ var I18N = {
 }
 
     function apiBase() {
-        if (window.ApiClient && ApiClient.getServerAddress) {
-            return ApiClient.getServerAddress() + '/';
-        }
-        return window.location.origin + '/';
+        if (
+            window.ApiClient &&
+            typeof ApiClient.getServerAddress === 'function'
+        ) {
+            return ApiClient.getServerAddress().replace(/\/+$/, '');
     }
+
+    return window.location.origin;
+}
 
     function fetchMovie(url) {
     var headers = {
@@ -269,31 +273,96 @@ var I18N = {
     }
 
     function onGet() {
-        var btn = overlay.querySelector('#rmGet');
-        var out = overlay.querySelector('#rmOut');
-        var genre = overlay.querySelector('#rmGenre').value;
-        var year = overlay.querySelector('#rmYear').value;
-        var rating = overlay.querySelector('#rmRating').value;
+    var btn = overlay.querySelector('#rmGet');
+    var out = overlay.querySelector('#rmOut');
 
-        btn.disabled = true;
-        btn.textContent = (I18N[lang] || I18N.hu).loading;
+    var genre =
+        overlay.querySelector('#rmGenre').value;
 
-        var q = [];
-        if (genre) q.push('genreId=' + encodeURIComponent(genre));
-        if (year) q.push('year=' + encodeURIComponent(year));
-        if (rating) q.push('minRating=' + encodeURIComponent(rating));
-        var url = apiBase() + 'RandomMovie/random' + (q.length ? '?' + q.join('&') : '');
+    var year =
+        overlay.querySelector('#rmYear').value;
 
-        fetchMovie(url).then(function (m) {
-            if (!m || !m.Title) throw new Error('empty');
-            renderResult(out, m);
-        }).catch(function () {
-            renderMessage(out, t('noResult'));
-        }).finally(function () {
-            btn.disabled = false;
-            btn.textContent = (I18N[lang] || I18N.hu).getMovie;
-        });
+    var rating =
+        overlay.querySelector('#rmRating').value;
+
+    btn.disabled = true;
+    btn.textContent =
+        (I18N[lang] || I18N.hu).loading;
+
+    var q = [];
+
+    if (genre) {
+        q.push(
+            'genreId=' +
+            encodeURIComponent(genre)
+        );
     }
+
+    if (year) {
+        q.push(
+            'year=' +
+            encodeURIComponent(year)
+        );
+    }
+
+    if (rating) {
+        q.push(
+            'minRating=' +
+            encodeURIComponent(rating)
+        );
+    }
+
+    var url =
+        apiBase() +
+        '/RandomMovie/random' +
+        (q.length ? '?' + q.join('&') : '');
+
+    fetchMovie(url)
+        .then(function (movie) {
+            if (!movie || !movie.Title) {
+                throw new Error('empty');
+            }
+
+            renderResult(out, movie);
+        })
+        .catch(function (error) {
+            console.error(
+                'Random Movie error:',
+                error
+            );
+
+            if (error.status === 400) {
+                renderMessage(
+                    out,
+                    t('noKey')
+                );
+            } else if (error.status === 404) {
+                renderMessage(
+                    out,
+                    t('noResult')
+                );
+            } else if (error.status === 502) {
+                renderMessage(
+                    out,
+                    lang === 'hu'
+                        ? 'A TMDB jelenleg nem érhető el.'
+                        : 'TMDB is currently unavailable.'
+                );
+            } else {
+                renderMessage(
+                    out,
+                    lang === 'hu'
+                        ? 'Hiba történt a film keresése közben.'
+                        : 'An error occurred while searching for a movie.'
+                );
+            }
+        })
+        .finally(function () {
+            btn.disabled = false;
+            btn.textContent =
+                (I18N[lang] || I18N.hu).getMovie;
+        });
+}
 
     function renderResult(out, m) {
         var html = '<div style="display:flex;gap:14px;">';
