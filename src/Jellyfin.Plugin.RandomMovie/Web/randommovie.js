@@ -99,16 +99,45 @@ var I18N = {
     }
 
     function fetchMovie(url) {
-        var headers = { Accept: 'application/json' };
-        var token = getToken();
-        if (token) {
-            headers.Authorization = 'MediaBrowser Token="' + token + '"';
-        }
-        return fetch(url, { headers: headers }).then(function (r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-        });
+    var headers = {
+        Accept: 'application/json'
+    };
+
+    var token = getToken();
+
+    if (token) {
+        headers.Authorization =
+            'MediaBrowser Token="' + token + '"';
     }
+
+    return fetch(url, {
+        headers: headers
+    }).then(function (response) {
+        return response.text().then(function (text) {
+            var data = null;
+
+            try {
+                data = text ? JSON.parse(text) : null;
+            } catch (e) {
+                data = null;
+            }
+
+            if (!response.ok) {
+                var message =
+                    data && typeof data === 'string'
+                        ? data
+                        : 'HTTP ' + response.status;
+
+                var error = new Error(message);
+                error.status = response.status;
+
+                throw error;
+            }
+
+            return data;
+        });
+    });
+}
 
     function toast(msg) {
         if (window.Toast && Toast.show) { Toast.show(msg); }
