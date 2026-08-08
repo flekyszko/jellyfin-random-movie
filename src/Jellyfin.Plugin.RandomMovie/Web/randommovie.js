@@ -115,20 +115,49 @@ var I18N = {
         else { alert(msg); }
     }
 
-        function injectButton() {
-        var old = document.getElementById('jfRandomMovieFab');
-        if (old) old.remove();
-        var btn = document.createElement('button');
-        btn.id = 'jfRandomMovieFab';
-        btn.type = 'button';
-        btn.title = (I18N[lang] || I18N.hu).title;
-        btn.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:200000;' +
-            'width:58px;height:58px;border-radius:50%;border:0;font-size:24px;cursor:pointer;' +
-            'background:rgba(0,164,220,.9);color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.4);';
-        btn.textContent = '🎲';
-        btn.addEventListener('click', openDialog);
-        document.body.appendChild(btn);
+    function injectButton() {
+        if (!document.body) {
+        return;
     }
+
+    /*
+     * IMPORTANT:
+     * Never remove/recreate the button when it already exists.
+     * MutationObserver can call this function very often.
+     */
+    if (document.getElementById('jfRandomMovieFab')) {
+        return;
+    }
+
+    var btn = document.createElement('button');
+
+    btn.id = 'jfRandomMovieFab';
+    btn.type = 'button';
+    btn.title = (I18N[lang] || I18N.hu).title;
+
+    btn.style.cssText =
+        'position:fixed;' +
+        'bottom:24px;' +
+        'right:24px;' +
+        'z-index:200000;' +
+        'width:58px;' +
+        'height:58px;' +
+        'border-radius:50%;' +
+        'border:0;' +
+        'font-size:24px;' +
+        'cursor:pointer;' +
+        'background:rgba(0,164,220,.9);' +
+        'color:#fff;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,.4);';
+
+    btn.textContent = '🎲';
+
+    btn.addEventListener(
+        'click',
+        openDialog);
+
+    document.body.appendChild(btn);
+}
 
     function openDialog() {        close();
         overlay = document.createElement('div');
