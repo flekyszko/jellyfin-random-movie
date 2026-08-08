@@ -291,16 +291,44 @@ function loadLang() {
 
     function scheduleInject() {
         injectButton();
-        if (window.MutationObserver) {
-            var obs = new MutationObserver(function () {
-                if (document.body) injectButton();
-            });
-            obs.observe(document.documentElement, { childList: true, subtree: true });
-        }
-        if (window.addEventListener) {
-            window.addEventListener('viewchange', function () { injectButton(); });
-        }
+
+    if (window.MutationObserver) {
+        var scheduled = false;
+
+        var obs = new MutationObserver(function () {
+            if (scheduled) {
+                return;
+            }
+
+            scheduled = true;
+
+            /*
+             * Wait until Jellyfin finishes its current DOM update.
+             */
+            setTimeout(function () {
+                scheduled = false;
+                injectButton();
+            }, 100);
+        });
+
+        obs.observe(
+            document.body || document.documentElement,
+            {
+                childList: true,
+                subtree: true
+            }
+        );
     }
+
+    if (window.addEventListener) {
+        window.addEventListener(
+            'viewchange',
+            function () {
+                injectButton();
+            }
+        );
+    }
+}
 
     function init() {
         loadLang();
