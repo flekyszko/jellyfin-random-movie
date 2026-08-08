@@ -88,8 +88,12 @@ var I18N = {
     }
 
     function getToken() {
-        return (window.ApiClient && ApiClient.accessToken) ? ApiClient.accessToken() : (localStorage.getItem('jellyfin_credentials') && (JSON.parse(localStorage.getItem('jellyfin_credentials')).token || '')) || '';
-    }
+    return (window.ApiClient && ApiClient.accessToken) ?
+        ApiClient.accessToken() :
+        (localStorage.getItem('jellyfin_credentials') &&
+            (JSON.parse(localStorage.getItem('jellyfin_credentials')).token || '')) ||
+        '';
+}
 
     function apiBase() {
         if (window.ApiClient && ApiClient.getServerAddress) {
