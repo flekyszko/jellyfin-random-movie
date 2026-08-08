@@ -88,11 +88,29 @@ var I18N = {
     }
 
     function getToken() {
-    return (window.ApiClient && ApiClient.accessToken) ?
-        ApiClient.accessToken() :
-        (localStorage.getItem('jellyfin_credentials') &&
-            (JSON.parse(localStorage.getItem('jellyfin_credentials')).token || '')) ||
-        '';
+    try {
+        if (
+            window.ApiClient &&
+            typeof ApiClient.accessToken === 'function'
+        ) {
+            return ApiClient.accessToken() || '';
+        }
+
+        var raw =
+            localStorage.getItem(
+                'jellyfin_credentials');
+
+        if (!raw) {
+            return '';
+        }
+
+        var credentials =
+            JSON.parse(raw);
+
+        return credentials.token || '';
+    } catch (e) {
+        return '';
+    }
 }
 
     function apiBase() {
