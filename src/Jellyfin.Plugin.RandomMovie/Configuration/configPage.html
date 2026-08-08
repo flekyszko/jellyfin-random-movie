@@ -45,7 +45,7 @@
                     ApiClient.getPluginConfiguration(RandomMovieConfig.pluginUniqueId).then(function (config) {
                         document.querySelector('#txtApiKey').value = config.TmdbApiKey || '';
                         document.querySelector('#selLang').value = config.UiLanguage || 'hu';
-                        document.querySelector('#numPages').value = config.MaxRandomPages || 5;
+                        document.querySelector('#numPages').value = config.MaxRandomPages || 10
                         Dashboard.hideLoadingMsg();
                     });
                 });
